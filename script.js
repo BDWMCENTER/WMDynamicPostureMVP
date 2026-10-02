@@ -4,7 +4,11 @@ const video = document.getElementById("camera");
 startButton.addEventListener("click", async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+      video: {
+        facingMode: {
+          ideal: "environment"
+        }
+      },
       audio: false
     });
 
