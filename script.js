@@ -17,6 +17,11 @@ let drawingUtils;
 let stream;
 let lastTime = -1;
 
+// Peak values
+let peakKneeFlexion = 0;
+let peakTrunkLean = 0;
+let peakSide = "--";
+
 
 // ==========================
 // CAMERA
@@ -24,7 +29,6 @@ let lastTime = -1;
 
 startCamera.addEventListener("click", async () => {
   try {
-
     status.textContent = "Status: opening camera...";
 
     if (stream) {
@@ -41,13 +45,11 @@ startCamera.addEventListener("click", async () => {
     });
 
     video.srcObject = stream;
-
     await video.play();
 
     status.textContent = "Status: camera ready";
 
   } catch (error) {
-
     console.error(error);
 
     status.textContent =
@@ -61,7 +63,6 @@ startCamera.addEventListener("click", async () => {
 // ==========================
 
 async function loadPoseLandmarker() {
-
   status.textContent =
     "Status: loading pose model...";
 
@@ -101,9 +102,7 @@ startTracking.addEventListener(
   async () => {
 
     if (!video.srcObject) {
-
       alert("Start Camera dulu.");
-
       return;
     }
 
@@ -175,15 +174,6 @@ function calculateTrunkLean(
   const dy =
     shoulder.y - hip.y;
 
-  /*
-  Angle relative to vertical.
-
-  0° = upright trunk
-
-  Higher angle =
-  more trunk inclination
-  */
-
   const angle =
     Math.atan2(
       Math.abs(dx),
@@ -196,14 +186,12 @@ function calculateTrunkLean(
 
 
 // ==========================
-// CHOOSE BEST SIDE
+// VISIBILITY
 // ==========================
 
 function getVisibility(point) {
 
-  if (
-    point.visibility === undefined
-  ) {
+  if (point.visibility === undefined) {
     return 1;
   }
 
@@ -211,39 +199,51 @@ function getVisibility(point) {
 }
 
 
-function chooseTrunkSide(
+function chooseBestSide(
   leftShoulder,
   rightShoulder,
   leftHip,
-  rightHip
+  rightHip,
+  leftKnee,
+  rightKnee,
+  leftAnkle,
+  rightAnkle
 ) {
 
   const leftScore =
     Math.min(
       getVisibility(leftShoulder),
-      getVisibility(leftHip)
+      getVisibility(leftHip),
+      getVisibility(leftKnee),
+      getVisibility(leftAnkle)
     );
 
   const rightScore =
     Math.min(
       getVisibility(rightShoulder),
-      getVisibility(rightHip)
+      getVisibility(rightHip),
+      getVisibility(rightKnee),
+      getVisibility(rightAnkle)
     );
 
   if (leftScore >= rightScore) {
 
     return {
+      side: "Left",
       shoulder: leftShoulder,
       hip: leftHip,
-      side: "left"
+      knee: leftKnee,
+      ankle: leftAnkle
     };
 
   } else {
 
     return {
+      side: "Right",
       shoulder: rightShoulder,
       hip: rightHip,
-      side: "right"
+      knee: rightKnee,
+      ankle: rightAnkle
     };
   }
 }
@@ -295,10 +295,7 @@ function trackPose() {
         result.landmarks[0];
 
 
-      // ==========================
       // DRAW SKELETON
-      // ==========================
-
       drawingUtils.drawConnectors(
         landmarks,
         PoseLandmarker.POSE_CONNECTIONS,
@@ -315,10 +312,7 @@ function trackPose() {
       );
 
 
-      // ==========================
       // LANDMARKS
-      // ==========================
-
       const leftShoulder =
         landmarks[11];
 
@@ -344,10 +338,7 @@ function trackPose() {
         landmarks[28];
 
 
-      // ==========================
-      // KNEE FLEXION
-      // ==========================
-
+      // LEFT KNEE
       const leftGeometricAngle =
         calculateAngle(
           leftHip,
@@ -355,6 +346,11 @@ function trackPose() {
           leftAnkle
         );
 
+      const leftKneeFlexion =
+        180 - leftGeometricAngle;
+
+
+      // RIGHT KNEE
       const rightGeometricAngle =
         calculateAngle(
           rightHip,
@@ -362,26 +358,11 @@ function trackPose() {
           rightAnkle
         );
 
-
-      /*
-      Clinical knee flexion:
-
-      standing =
-      approximately 0°
-
-      squat =
-      flexion increases
-      */
-
-      const leftKneeFlexion =
-        180 -
-        leftGeometricAngle;
-
       const rightKneeFlexion =
-        180 -
-        rightGeometricAngle;
+        180 - rightGeometricAngle;
 
 
+      // DIFFERENCE
       const kneeDifference =
         Math.abs(
           leftKneeFlexion -
@@ -389,28 +370,85 @@ function trackPose() {
         );
 
 
-      // ==========================
-      // TRUNK LEAN
-      // ==========================
-
-      const trunkSide =
-        chooseTrunkSide(
+      // BEST SIDE
+      const bestSide =
+        chooseBestSide(
           leftShoulder,
           rightShoulder,
           leftHip,
-          rightHip
+          rightHip,
+          leftKnee,
+          rightKnee,
+          leftAnkle,
+          rightAnkle
         );
+
+
+      const bestGeometricAngle =
+        calculateAngle(
+          bestSide.hip,
+          bestSide.knee,
+          bestSide.ankle
+        );
+
+      const bestKneeFlexion =
+        180 - bestGeometricAngle;
 
 
       const trunkLean =
         calculateTrunkLean(
-          trunkSide.shoulder,
-          trunkSide.hip
+          bestSide.shoulder,
+          bestSide.hip
         );
 
 
       // ==========================
-      // UPDATE DISPLAY
+      // PEAK SQUAT CAPTURE
+      // ==========================
+
+      if (
+        bestKneeFlexion >
+        peakKneeFlexion
+      ) {
+
+        peakKneeFlexion =
+          bestKneeFlexion;
+
+        peakTrunkLean =
+          trunkLean;
+
+        peakSide =
+          bestSide.side;
+
+        document
+          .getElementById(
+            "peakKnee"
+          )
+          .textContent =
+          peakKneeFlexion
+            .toFixed(1) +
+          "°";
+
+        document
+          .getElementById(
+            "peakTrunk"
+          )
+          .textContent =
+          peakTrunkLean
+            .toFixed(1) +
+          "°";
+
+        document
+          .getElementById(
+            "peakSide"
+          )
+          .textContent =
+          peakSide;
+      }
+
+
+      // ==========================
+      // LIVE DISPLAY
       // ==========================
 
       document
@@ -467,3 +505,36 @@ function trackPose() {
     trackPose
   );
 }
+
+
+// ==========================
+// RESET PEAK
+// ==========================
+
+window.resetPeak = function() {
+
+  peakKneeFlexion = 0;
+  peakTrunkLean = 0;
+  peakSide = "--";
+
+  document
+    .getElementById(
+      "peakKnee"
+    )
+    .textContent =
+    "--°";
+
+  document
+    .getElementById(
+      "peakTrunk"
+    )
+    .textContent =
+    "--°";
+
+  document
+    .getElementById(
+      "peakSide"
+    )
+    .textContent =
+    "--";
+};
