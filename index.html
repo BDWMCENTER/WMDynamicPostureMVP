@@ -4,31 +4,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>WM Biomechanics MVP</title>
+
+  <style>
+    #cameraContainer {
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    #camera,
+    #overlay {
+      width: 100%;
+      height: auto;
+    }
+
+    #overlay {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+  </style>
 </head>
 
 <body>
 
   <h1>WM Biomechanics Screening</h1>
-
   <h2>Mini Squat Analyzer</h2>
-
   <p>MVP v0.1</p>
 
   <hr>
 
   <button id="startCamera">Start Camera</button>
+  <button id="startTracking">Start Pose Tracking</button>
 
   <br><br>
 
-  <video
-    id="camera"
-    width="640"
-    height="480"
-    autoplay
-    playsinline>
-  </video>
+  <div id="cameraContainer">
+
+    <video
+      id="camera"
+      autoplay
+      playsinline>
+    </video>
+
+    <canvas id="overlay"></canvas>
+
+  </div>
 
   <hr>
 
@@ -39,7 +61,9 @@
   <p>Trunk Lean: --°</p>
   <p>L-R Knee Difference: --°</p>
 
-  <script src="script.js"></script>
+  <p id="status">Status: waiting</p>
+
+  <script type="module" src="script.js"></script>
 
 </body>
 
