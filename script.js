@@ -4,38 +4,29 @@ import {
   DrawingUtils
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 
-const startCameraButton = document.getElementById("startCamera");
-const startTrackingButton = document.getElementById("startTracking");
-
 const video = document.getElementById("camera");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 
-const statusText = document.getElementById("status");
+const startCamera = document.getElementById("startCamera");
+const startTracking = document.getElementById("startTracking");
+const status = document.getElementById("status");
 
-let poseLandmarker = null;
-let drawingUtils = null;
+let poseLandmarker;
+let drawingUtils;
+let stream;
 
-let currentStream = null;
-let tracking = false;
-let lastVideoTime = -1;
-
-
-// =======================================
-// 1. START CAMERA
-// =======================================
-
-startCameraButton.addEventListener("click", async () => {
+startCamera.addEventListener("click", async () => {
 
   try {
 
-    statusText.innerText = "Status: starting camera...";
+    status.textContent = "Status: opening camera...";
 
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
+    stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: {
           exact: "environment"
@@ -44,71 +35,56 @@ startCameraButton.addEventListener("click", async () => {
       audio: false
     });
 
-    currentStream = stream;
     video.srcObject = stream;
 
     await video.play();
 
-    statusText.innerText = "Status: camera ready";
+    status.textContent = "Status: camera ready";
 
   } catch (error) {
 
-    console.error("Camera error:", error);
+    console.error(error);
 
-    statusText.innerText = "Status: camera error";
-
-    alert(
-      "Kamera belakang tidak bisa diakses. Error: " +
-      error.name
-    );
+    status.textContent =
+      "Status: camera error - " + error.name;
   }
 });
 
 
-// =======================================
-// 2. LOAD MEDIAPIPE
-// =======================================
+async function loadPoseLandmarker() {
 
-async function initializePoseLandmarker() {
+  status.textContent =
+    "Status: loading pose model...";
 
-  statusText.innerText = "Status: loading MediaPipe...";
+  const vision =
+    await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
 
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-  );
+  poseLandmarker =
+    await PoseLandmarker.createFromOptions(
+      vision,
+      {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
+        },
 
-  poseLandmarker = await PoseLandmarker.createFromOptions(
-    vision,
-    {
-      baseOptions: {
-        modelAssetPath:
-          "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-        delegate: "GPU"
-      },
+        runningMode: "VIDEO",
 
-      runningMode: "VIDEO",
+        numPoses: 1
+      }
+    );
 
-      numPoses: 1,
+  drawingUtils =
+    new DrawingUtils(ctx);
 
-      minPoseDetectionConfidence: 0.5,
-
-      minPosePresenceConfidence: 0.5,
-
-      minTrackingConfidence: 0.5
-    }
-  );
-
-  drawingUtils = new DrawingUtils(ctx);
-
-  statusText.innerText = "Status: MediaPipe ready";
+  status.textContent =
+    "Status: MediaPipe ready";
 }
 
 
-// =======================================
-// 3. START POSE TRACKING
-// =======================================
-
-startTrackingButton.addEventListener("click", async () => {
+startTracking.addEventListener("click", async () => {
 
   if (!video.srcObject) {
 
@@ -117,68 +93,52 @@ startTrackingButton.addEventListener("click", async () => {
     return;
   }
 
-  if (!poseLandmarker) {
+  try {
 
-    try {
-
-      await initializePoseLandmarker();
-
-    } catch (error) {
-
-      console.error("MediaPipe error:", error);
-
-      statusText.innerText =
-        "Status: MediaPipe failed to load";
-
-      alert("MediaPipe gagal dimuat.");
-
-      return;
+    if (!poseLandmarker) {
+      await loadPoseLandmarker();
     }
+
+    status.textContent =
+      "Status: tracking";
+
+    requestAnimationFrame(trackPose);
+
+  } catch (error) {
+
+    console.error(error);
+
+    status.textContent =
+      "Status: MediaPipe error";
+
+    alert(error.message);
   }
-
-  tracking = true;
-
-  statusText.innerText =
-    "Status: tracking pose";
-
-  predictWebcam();
 });
 
 
-// =======================================
-// 4. READ VIDEO FRAME
-// =======================================
+let lastTime = -1;
 
-async function predictWebcam() {
+function trackPose() {
 
-  if (!tracking) {
-    return;
-  }
+  if (!poseLandmarker) return;
 
   if (
-    video.readyState < 2 ||
-    video.videoWidth === 0 ||
-    video.videoHeight === 0
+    video.readyState >= 2 &&
+    video.currentTime !== lastTime
   ) {
 
-    requestAnimationFrame(predictWebcam);
+    lastTime = video.currentTime;
 
-    return;
-  }
+    canvas.width =
+      video.videoWidth;
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  if (video.currentTime !== lastVideoTime) {
-
-    lastVideoTime = video.currentTime;
-
-    const timestamp = performance.now();
+    canvas.height =
+      video.videoHeight;
 
     const result =
       poseLandmarker.detectForVideo(
         video,
-        timestamp
+        performance.now()
       );
 
     ctx.clearRect(
@@ -193,35 +153,33 @@ async function predictWebcam() {
       result.landmarks.length > 0
     ) {
 
-      for (
-        const landmarks of result.landmarks
-      ) {
+      const landmarks =
+        result.landmarks[0];
 
-        drawingUtils.drawConnectors(
-          landmarks,
-          PoseLandmarker.POSE_CONNECTIONS,
-          {
-            lineWidth: 3
-          }
-        );
+      drawingUtils.drawConnectors(
+        landmarks,
+        PoseLandmarker.POSE_CONNECTIONS,
+        {
+          lineWidth: 3
+        }
+      );
 
-        drawingUtils.drawLandmarks(
-          landmarks,
-          {
-            radius: 4
-          }
-        );
-      }
+      drawingUtils.drawLandmarks(
+        landmarks,
+        {
+          radius: 4
+        }
+      );
 
-      statusText.innerText =
+      status.textContent =
         "Status: body detected";
 
     } else {
 
-      statusText.innerText =
-        "Status: searching for body...";
+      status.textContent =
+        "Status: searching body";
     }
   }
 
-  requestAnimationFrame(predictWebcam);
+  requestAnimationFrame(trackPose);
 }
