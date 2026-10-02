@@ -8,6 +8,7 @@
   <title>WM Biomechanics MVP</title>
 
   <style>
+
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
@@ -46,38 +47,87 @@
       pointer-events: none;
     }
 
-    #measurementBox {
+    .measurementBox {
+
       margin-top: 24px;
-      padding: 16px;
+      padding: 18px;
+
       border: 1px solid #ddd;
-      border-radius: 8px;
+      border-radius: 10px;
+
       max-width: 500px;
     }
 
     .measurementItem {
-      margin: 10px 0;
+
+      margin: 12px 0;
+
       font-size: 18px;
     }
 
+    #peakBox {
+
+      margin-top: 24px;
+
+      padding: 18px;
+
+      border: 2px solid #333;
+
+      border-radius: 10px;
+
+      max-width: 500px;
+    }
+
     #status {
+
       margin-top: 16px;
+
       font-weight: bold;
     }
+
   </style>
+
 </head>
+
 
 <body>
 
-  <h1>WM Biomechanics Screening</h1>
-  <h2>Mini Squat Analyzer</h2>
-  <p>MVP v0.1</p>
+
+  <h1>
+    WM Biomechanics Screening
+  </h1>
+
+
+  <h2>
+    Mini Squat Analyzer — Side View
+  </h2>
+
+
+  <p>
+    MVP v0.2
+  </p>
+
 
   <hr>
 
-  <button id="startCamera">Start Camera</button>
-  <button id="startTracking">Start Pose Tracking</button>
+
+  <button id="startCamera">
+    Start Camera
+  </button>
+
+
+  <button id="startTracking">
+    Start Pose Tracking
+  </button>
+
+
+  <button onclick="resetPeak()">
+    Reset Peak
+  </button>
+
 
   <div id="cameraContainer">
+
 
     <video
       id="camera"
@@ -85,40 +135,127 @@
       playsinline>
     </video>
 
-    <canvas id="overlay"></canvas>
+
+    <canvas
+      id="overlay">
+    </canvas>
+
 
   </div>
 
-  <p id="status">Status: waiting</p>
 
-  <div id="measurementBox">
+  <p id="status">
+    Status: waiting
+  </p>
 
-    <h3>Movement Measurement</h3>
+
+  <div class="measurementBox">
+
+
+    <h3>
+      Live Measurement
+    </h3>
+
 
     <div class="measurementItem">
+
       Left Knee Flexion:
-      <strong id="leftKnee">--°</strong>
+
+      <strong id="leftKnee">
+        --°
+      </strong>
+
     </div>
 
+
     <div class="measurementItem">
+
       Right Knee Flexion:
-      <strong id="rightKnee">--°</strong>
+
+      <strong id="rightKnee">
+        --°
+      </strong>
+
     </div>
 
+
     <div class="measurementItem">
+
       Trunk Lean:
-      <strong id="trunkLean">--°</strong>
+
+      <strong id="trunkLean">
+        --°
+      </strong>
+
     </div>
 
+
     <div class="measurementItem">
+
       L-R Knee Difference:
-      <strong id="kneeDifference">--°</strong>
+
+      <strong id="kneeDifference">
+        --°
+      </strong>
+
     </div>
+
 
   </div>
 
-  <script type="module" src="script.js"></script>
+
+
+  <div id="peakBox">
+
+
+    <h3>
+      Peak Squat Result
+    </h3>
+
+
+    <div class="measurementItem">
+
+      Knee Flexion:
+
+      <strong id="peakKnee">
+        --°
+      </strong>
+
+    </div>
+
+
+    <div class="measurementItem">
+
+      Trunk Lean:
+
+      <strong id="peakTrunk">
+        --°
+      </strong>
+
+    </div>
+
+
+    <div class="measurementItem">
+
+      Tracking Side:
+
+      <strong id="peakSide">
+        --
+      </strong>
+
+    </div>
+
+
+  </div>
+
+
+  <script
+    type="module"
+    src="script.js">
+  </script>
+
 
 </body>
+
 
 </html>
