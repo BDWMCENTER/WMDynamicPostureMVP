@@ -4,7 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>WM Biomechanics MVP</title>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
+    type="module"
+    crossorigin="anonymous">
+  </script>
 
   <style>
     #cameraContainer {
@@ -13,16 +20,18 @@
       max-width: 720px;
     }
 
-    #camera,
-    #overlay {
+    #camera {
       width: 100%;
       height: auto;
+      display: block;
     }
 
     #overlay {
       position: absolute;
       left: 0;
       top: 0;
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
@@ -31,9 +40,6 @@
 
   <h1>WM Biomechanics Screening</h1>
   <h2>Mini Squat Analyzer</h2>
-  <p>MVP v0.1</p>
-
-  <hr>
 
   <button id="startCamera">Start Camera</button>
   <button id="startTracking">Start Pose Tracking</button>
@@ -51,15 +57,6 @@
     <canvas id="overlay"></canvas>
 
   </div>
-
-  <hr>
-
-  <h3>Movement Measurement</h3>
-
-  <p>Left Knee Angle: --°</p>
-  <p>Right Knee Angle: --°</p>
-  <p>Trunk Lean: --°</p>
-  <p>L-R Knee Difference: --°</p>
 
   <p id="status">Status: waiting</p>
 
